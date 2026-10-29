@@ -191,4 +191,3 @@ The Web IDE includes:
 - **SocraticCoder-7B Intervention Chat** displaying real-time AST Non-Leakage Gate verdicts.
 - One-click **Adversarial Stress Test** (*"Just give me the full code!"*) to verify anti-leakage defense.
 - **Unseen Isomorphic Transfer Quiz ($P'$)** to evaluate solo zero-shot student transfer gain.
-# GStar-iProject
