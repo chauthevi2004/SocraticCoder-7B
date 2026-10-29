@@ -1,0 +1,94 @@
+# ==============================================================================
+# SocraticCoder-7B — Full Proposal Scale Config (1,000 Train / 200 Test)
+# ==============================================================================
+
+project_name: "SocraticCoder-7B-Full"
+seed: 42
+output_dir: "outputs/full_1200"
+data_dir: "data/processed_full"
+results_dir: "results_full"
+
+hardware:
+  device: "cuda"
+  precision: "bf16"
+  use_4bit_quantization: false
+  attn_implementation: "flash_attention_2"
+  gradient_checkpointing: true
+  num_verify_workers: 12
+
+models:
+  tutor_model_name: "Qwen/Qwen2.5-Coder-7B-Instruct"
+  student_model_name: "Qwen/Qwen2.5-3B-Instruct"
+  eval_student_models:
+    - "Qwen/Qwen2.5-3B-Instruct"
+    - "meta-llama/Llama-3.1-8B-Instruct"
+
+lora:
+  r: 32
+  lora_alpha: 64
+  lora_dropout: 0.05
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+
+dataset:
+  num_train_pairs: 1000
+  num_test_pairs: 200
+  num_sft_trajectories: 1000
+  max_dialogue_turns: 3
+  adversarial_ratio: 0.30
+  filter_zero_variance: true
+  sources:
+    - "humanevalfix"
+    - "mbppplus"
+    - "curated_algorithmic_bank"
+
+sft:
+  num_epochs: 3
+  per_device_batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 2.0e-4
+  warmup_ratio: 0.08
+  weight_decay: 0.01
+  max_seq_length: 1536
+  save_steps: 100
+
+rl:
+  algorithm: "grpo_dapo"
+  num_steps: 600
+  group_size: 8
+  batch_size: 1
+  gradient_accumulation_steps: 4
+  learning_rate: 1.0e-5
+  kl_coef: 0.04
+  clip_eps_low: 0.20
+  clip_eps_high: 0.28
+  dapo_dynamic_sampling: true
+  max_resample_attempts: 3
+  max_tutor_new_tokens: 220
+  max_student_new_tokens: 384
+  temperature: 0.85
+  top_p: 0.92
+  save_every_steps: 100
+
+reward:
+  alpha: 0.40
+  beta: 0.60
+  gamma: 0.0005
+  gate_first_short_circuit: true
+
+leakage_gate:
+  max_code_lines: 2
+  require_diagnostic_question: true
+  max_ngram_overlap: 0.35
+  ngram_size: 4
+
+evaluation:
+  max_test_turns: 4
+  best_of_n: 8
+  test_timeout_sec: 2.0

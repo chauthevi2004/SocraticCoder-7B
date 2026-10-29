@@ -1,0 +1,12 @@
+{
+  "model": "Google Gemini (gemini-flash-lite-latest)",
+  "num_test_pairs": 100,
+  "practice_pass_rate": 72.9,
+  "mean_transfer_delta": 35.51,
+  "adversarial_leakage_rate": 23.08,
+  "overall_leakage_rate": 20.0,
+  "mean_tokens": 96.0,
+  "transfer_gain_per_1k_tokens": 369.9,
+  "composite_reward": 0.4671,
+  "total_elapsed_seconds": 307.57
+}

@@ -1,0 +1,89 @@
+# ==============================================================================
+# SocraticCoder-7B — Fast 10-Minute Smoke Test Config
+# Verifies all pipeline stages (Data -> SFT -> RL -> Ablation -> Eval -> Plots)
+# ==============================================================================
+
+project_name: "SocraticCoder-SmokeTest"
+seed: 42
+output_dir: "outputs/smoke_test"
+data_dir: "data/smoke_test"
+results_dir: "results/smoke_test"
+
+hardware:
+  device: "cuda"
+  precision: "bf16"
+  use_4bit_quantization: true
+  attn_implementation: "sdpa"
+  gradient_checkpointing: true
+  num_verify_workers: 4
+
+models:
+  tutor_model_name: "Qwen/Qwen2.5-Coder-7B-Instruct"
+  student_model_name: "Qwen/Qwen2.5-3B-Instruct"
+  eval_student_models:
+    - "Qwen/Qwen2.5-3B-Instruct"
+
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+
+dataset:
+  num_train_pairs: 24
+  num_test_pairs: 12
+  num_sft_trajectories: 24
+  max_dialogue_turns: 2
+  adversarial_ratio: 0.35
+  filter_zero_variance: true
+  sources:
+    - "curated_algorithmic_bank"
+
+sft:
+  num_epochs: 1
+  per_device_batch_size: 2
+  gradient_accumulation_steps: 2
+  learning_rate: 2.0e-4
+  warmup_ratio: 0.1
+  weight_decay: 0.01
+  max_seq_length: 1024
+  save_steps: 10
+
+rl:
+  algorithm: "grpo_dapo"
+  num_steps: 10
+  group_size: 4
+  batch_size: 1
+  gradient_accumulation_steps: 2
+  learning_rate: 2.0e-5
+  kl_coef: 0.04
+  clip_eps_low: 0.20
+  clip_eps_high: 0.28
+  dapo_dynamic_sampling: true
+  max_resample_attempts: 2
+  max_tutor_new_tokens: 180
+  max_student_new_tokens: 320
+  temperature: 0.85
+  top_p: 0.92
+  save_every_steps: 5
+
+reward:
+  alpha: 0.40
+  beta: 0.60
+  gamma: 0.0005
+  gate_first_short_circuit: true
+
+leakage_gate:
+  max_code_lines: 2
+  require_diagnostic_question: true
+  max_ngram_overlap: 0.35
+  ngram_size: 4
+
+evaluation:
+  max_test_turns: 2
+  best_of_n: 4
+  test_timeout_sec: 2.0

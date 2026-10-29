@@ -1,0 +1,8 @@
+{
+  "num_verified_base_templates": 10,
+  "num_train_pairs": 1000,
+  "num_test_pairs": 200,
+  "num_sft_trajectories": 1000,
+  "adversarial_train_count": 307,
+  "adversarial_test_count": 54
+}

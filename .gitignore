@@ -1,0 +1,29 @@
+# Environment and Secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Model Weights & Data bundles (large files)
+*.zip
+*.tar.gz
+outputs/
+data/kaggle_t4x2/
+results/kaggle_t4x2/*.zip
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

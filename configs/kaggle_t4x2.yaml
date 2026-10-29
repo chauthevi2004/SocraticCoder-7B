@@ -1,0 +1,111 @@
+# ==============================================================================
+# SocraticCoder-7B — Kaggle Dual GPU (2x NVIDIA T4, 2x 16GB = 32GB VRAM) Config
+# Asymmetric Dual-GPU Placement:
+#   - GPU 0 (`cuda:0`): Trainable Tutor Policy `Qwen2.5-Coder-7B-Instruct` (4-bit QLoRA fp16, ~9.5 GB VRAM)
+#   - GPU 1 (`cuda:1`): Frozen Simulated Student `Qwen2.5-3B-Instruct` (4-bit fp16, ~3.5 GB VRAM)
+# Target Total Runtime on Kaggle T4 x2: ~7.5 - 9.5 hours (fits inside 1 Kaggle 12h session!)
+# ==============================================================================
+
+project_name: "SocraticCoder-7B-Kaggle-T4x2"
+seed: 42
+output_dir: "/kaggle/working/outputs/kaggle_t4x2"
+data_dir: "/kaggle/working/data/processed"
+results_dir: "/kaggle/working/results/kaggle_t4x2"
+
+# Hardware & Asymmetric Dual-GPU Memory Optimization for 2x T4 (Turing SM75, fp16)
+hardware:
+  device: "cuda"
+  tutor_device: "cuda:0"               # Pin 7B Trainable Tutor to T4 GPU #0
+  student_device: "cuda:1"             # Pin 3B Frozen Student Simulator to T4 GPU #1 (Zero VRAM contention!)
+  precision: "fp16"                    # T4 (Turing) has native FP16 Tensor Cores
+  use_4bit_quantization: true          # NF4 + Double Quantization
+  attn_implementation: "sdpa"
+  gradient_checkpointing: true
+  num_verify_workers: 4                # Kaggle provides 4 vCPU cores
+
+# Models
+models:
+  tutor_model_name: "Qwen/Qwen2.5-Coder-7B-Instruct"
+  student_model_name: "Qwen/Qwen2.5-3B-Instruct"
+  eval_student_models:
+    - "Qwen/Qwen2.5-3B-Instruct"
+    - "Qwen/Qwen2.5-Coder-3B-Instruct"
+
+# LoRA Configuration for Tutor Policy (pi_theta)
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+
+# Stage 1: Paired Isomorphic Problem & Misconception Environment
+dataset:
+  num_train_pairs: 400                 # High-signal paired (P, P') tasks tailored for Kaggle 12h session limit
+  num_test_pairs: 100                  # Held-out paired (P, P') test suite
+  num_sft_trajectories: 400            # Gate-verified Socratic warm-start trajectories
+  max_dialogue_turns: 3
+  adversarial_ratio: 0.30
+  filter_zero_variance: true
+  sources:
+    - "humanevalfix"
+    - "mbppplus"
+    - "curated_algorithmic_bank"
+
+# Stage 3A: Supervised Fine-Tuning (SFT Warm-Start)
+sft:
+  num_epochs: 2
+  per_device_batch_size: 1             # Micro-batch = 1 keeps peak logits + backward < 8.5GB on 14.56GB T4
+  gradient_accumulation_steps: 16      # Effective batch size = 16 (identical optimization trajectory)
+  learning_rate: 1.0e-4                # Safe FP16 learning rate (prevents FP16 overflow on T4)
+  warmup_ratio: 0.10
+  weight_decay: 0.01
+  max_seq_length: 896
+  save_steps: 50
+
+# Stage 3B: Contextual State-Jump RL (GRPO + DAPO)
+rl:
+  algorithm: "grpo_dapo"
+  num_steps: 200                       # 200 State-Jump RL steps (~4h on T4x2 with Gate-First short-circuiting)
+  group_size: 4                        # G=4 candidate tutor responses per state s_t (prevents OOM on 16GB T4)
+  batch_size: 1
+  gradient_accumulation_steps: 4
+  learning_rate: 1.5e-5
+  kl_coef: 0.04
+  clip_eps_low: 0.20
+  clip_eps_high: 0.28
+  dapo_dynamic_sampling: true
+  max_resample_attempts: 2
+  max_tutor_new_tokens: 160
+  max_student_new_tokens: 256
+  temperature: 0.85
+  top_p: 0.92
+  save_every_steps: 50
+
+# Verifiable Pedagogical Reward:
+# R(a_t) = I_no-leak(a_t) * (alpha * Pass(c_final, U(P)) + beta * DeltaPass(c'_transfer, U(P')) - gamma * Tok(a_t))
+reward:
+  alpha: 0.40
+  beta: 0.60
+  gamma: 0.0005
+  gate_first_short_circuit: true
+
+# Executable Non-Leakage Gate (I_no-leak)
+leakage_gate:
+  max_code_lines: 2
+  require_diagnostic_question: true
+  max_ngram_overlap: 0.35
+  ngram_size: 4
+
+# Stage 4: Evaluation & Ablation Suite
+evaluation:
+  max_test_turns: 3
+  best_of_n: 4
+  test_timeout_sec: 2.0
+

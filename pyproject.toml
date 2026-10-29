@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "socratic-coder"
+version = "1.0.0"
+description = "Beyond Solution Dumping: Training Pedagogical Coding Tutors via Verifiable RL and Isomorphic Transfer Rewards (SocraticCoder-7B)"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Chau The Vi", email = "chauthevi@gstar.ai" }
+]
+dependencies = [
+    "torch>=2.3.0",
+    "transformers>=4.45.0",
+    "accelerate>=0.34.0",
+    "peft>=0.13.0",
+    "trl>=0.11.0",
+    "datasets>=2.21.0",
+    "bitsandbytes>=0.44.0",
+    "pyyaml>=6.0.1",
+    "tqdm>=4.66.0",
+    "numpy>=1.26.0",
+    "matplotlib>=3.8.0",
+    "gradio>=4.44.0",
+    "pytest>=8.0.0",
+]
+
+[project.optional-dependencies]
+vllm = ["vllm>=0.6.2"]
+flash = ["flash-attn>=2.6.3"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
